@@ -1,4 +1,5 @@
 from search import *
+from copy import deepcopy
 
 #################
 # Problem class #
@@ -7,77 +8,99 @@ from search import *
 
 class SoftFlow(Problem):
 
-    def __init__(self, initial):
-        self.initial = initial  # in string format
-        self.grid = initial.grid  # in list format
-        self.nbr = initial.nbr  # number of rows
-        self.nbc = initial.nbc  # number of columns
-        self.letters = {}  # letters positions
-        self.number = {}  # number positions
-        for i in range(self.nbr):
-            for j in range(self.nbc):
-                if self.grid[i][j] != '#' and self.grid[i][j] != ' ':
+    def process_grid(self, grid, nbc, nbr):
+        letters = {}
+        number = {}
+        for i in range(nbr):
+            for j in range(nbc):
+                if grid[i][j] != '#' and grid[i][j] != ' ':
                     # if it's a letter a to j
-                    if ord(self.grid[i][j]) >= 97 and ord(self.grid[i][j]) <= 106:
-                        self.letters[self.grid[i][j]] = (i, j)
+                    if ord(grid[i][j]) >= 97 and ord(grid[i][j]) <= 106:
+                        letters[grid[i][j]] = (i, j)
                     # if it's a box 0 to 9
-                    elif ord(self.grid[i][j]) >= 48 and ord(self.grid[i][j]) <= 57:
-                        self.number[self.grid[i][j]] = (i, j)
-        self.letters = dict(sorted(self.letters.items()))
-        self.number = dict(sorted(self.number.items()))
-        # not so important for the moment
-        self.number_of_cables = len(self.letters)
+                    elif ord(grid[i][j]) >= 48 and ord(grid[i][j]) <= 57:
+                        number[grid[i][j]] = (i, j)
+        dict(sorted(letters.items()))
+        dict(sorted(number.items()))
+        return letters, number
+
+    # this is for finding the key of letter to value of number
+    # ex: a -> 0 something like converter
+    def dic_l_n(self, letters, number):
+        list_l = list(letters.keys())
+        list_n = list(number.keys())
+        return dict(zip(list_l, list_n))
+
+    # this is for finding the key of number to value of letter
+    # ex: 0 -> a something like converter
+    def dic_n_l(self, number, letters):
+        list_l = list(letters.keys())
+        list_n = list(number.keys())
+        return dict(zip(list_n, list_l))
+
+    def __init__(self, initial):
+        self.initial = initial
 
     def actions(self, state):
         actions = []
-        # for each letter can move up, down, left or right if not # otherwise nothing
-        for l in self.letters:
-            i, j = self.letters[l]
+        letters, number = self.process_grid(state.grid, state.nbc, state.nbr)
+        for l in letters:
+            i, j = letters[l]
             # move up
-            if i > 0 and self.grid[i-1][j] == ' ':
+            if i > 0 and state.grid[i-1][j] == ' ':
                 actions.append((l, 'up'))
             # move down
-            if i < self.nbr-1 and self.grid[i+1][j] == ' ':
+            if i < state.nbr-1 and state.grid[i+1][j] == ' ':
                 actions.append((l, 'down'))
             # move left
-            if j > 0 and self.grid[i][j-1] == ' ':
+            if j > 0 and state.grid[i][j-1] == ' ':
                 actions.append((l, 'left'))
             # move right
-            if j < self.nbc-1 and self.grid[i][j+1] == ' ':
+            if j < state.nbc-1 and state.grid[i][j+1] == ' ':
                 actions.append((l, 'right'))
         return actions
 
+    # will try only with state if works
     def result(self, state, action):
-        # if action is taken i have to update position of the letter
-        l, d = action
-        i, j = self.letters[l]
+        new_state = deepcopy(state)
+        letters, number = self.process_grid(
+            new_state.grid, new_state.nbc, new_state.nbr)
+        l_to_n = self.dic_l_n(letters, number)  # letter to number converter
+
+        l, d = action       # l = letter, d = direction
+        i, j = letters[l]   # position of the letter
+
         if d == 'up':
-            self.letters[l] = (i-1,j)
+            new_state.grid[i][j] = l_to_n[l]
+            new_state.grid[i-1][j] = l
         elif d == 'down':
-            self.letters[l] = (i+1,j)
+            new_state.grid[i][j] = l_to_n[l]
+            new_state.grid[i+1][j] = l
         elif d == 'left':
-            self.letters[l] = (i,j-1)
+            new_state.grid[i][j] = l_to_n[l]
+            new_state.grid[i][j-1] = l
         elif d == 'right':
-            self.letters[l] = (i,j+1)
-        input()
-        pass
+            new_state.grid[i][j] = l_to_n[l]
+            new_state.grid[i][j+1] = l
+        print(new_state)
+        return new_state
 
     def goal_test(self, state):
-        # i think it could be better coded
-        l_posi = [self.letters[l] for l in self.letters]
-        n_posi = [self.number[n] for n in self.number]
-        for i in range(len(l_posi)):
-            if l_posi[i] != n_posi[i]:
-                return False
-        return True
+        letters, number = self.process_grid(state.grid, state.nbc, state.nbr)
+        l_posi = list(letters.values())
+        n_posi = list(number.values())
+        return l_posi == n_posi
 
     def h(self, node):
         h = 0.0
-        l_posi = [self.letters[l] for l in self.letters]
-        n_posi = [self.number[n] for n in self.number]
-        for i in range(len(l_posi)):
-            x1, y1 = l_posi[i]
-            x2, y2 = n_posi[i]
+        letters, number = self.process_grid(node.state.grid, node.state.nbc, node.state.nbr)
+        l_to_n = self.dic_l_n(letters, number)
+        n_to_l = self.dic_n_l(number, letters)
+        # using manhattan distance
+        for l in letters:
+            x1, y1 = letters[l]
+            n = l_to_n[l]
+            x2, y2 = number[n]
             h += abs(x1-x2) + abs(y1-y2)
         return h
 
@@ -125,7 +148,6 @@ class State:
 problem = SoftFlow.load(sys.argv[1])
 
 node = astar_search(problem)
-input()
 # example of print
 path = node.path()
 print('Number of moves: ', str(node.depth))

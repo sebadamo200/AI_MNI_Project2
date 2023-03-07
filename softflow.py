@@ -86,10 +86,11 @@ class SoftFlow(Problem):
         return new_state
 
     def goal_test(self, state):
+        # the state now
         letters, number = self.process_grid(state.grid, state.nbc, state.nbr)
-        l_posi = list(letters.values())
-        n_posi = list(number.values())
-        return l_posi == n_posi
+
+        
+        return l_posi == n_posi2
 
     def h(self, node):
         h = 0.0

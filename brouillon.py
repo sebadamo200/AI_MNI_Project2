@@ -1,5 +1,5 @@
 class SoftFlow(Problem):
-    
+
     def __init__(self, initial):
         self.initial = initial  # in string format
         self.grid = initial.grid  # in list format
@@ -94,3 +94,4 @@ class SoftFlow(Problem):
 
 
 #ICI IL Y A L'IDEE MAIS CA NE MARCHE PAS
+# Le probleme vient des nombres en gros il trouve plusiers nombre alors au debut il y un seul nombre
